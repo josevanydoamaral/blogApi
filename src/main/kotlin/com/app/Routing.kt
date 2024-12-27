@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -24,119 +25,142 @@ data class Comment(
 
 val posts = mutableListOf<Post>()
 
+val users = mapOf(
+    "jetrains" to "foobar",  // Exemplo de usuário e senha
+    "user1" to "password1",
+    "user2" to "password2"
+)
+
 fun Application.configureRouting() {
+    authentication {
+        basic("auth-basic") {
+            realm = "Access to the '/' path"
+            validate { credentials ->
+                if (users[credentials.name] == credentials.password) {
+                    UserIdPrincipal(credentials.name)
+                } else {
+                    null
+                }
+            }
+        }
+    }
     routing {
         get("/") {
-            call.respondText("Hello World!")
+            call.respondText("Hello, ${call.principal<UserIdPrincipal>()?.name}!")
             // AQUI QUERO COLOCAR O README
         }
+
 
         get("posts") {
             call.respond(posts)
         }
-        post("posts/add") {
-            val postsReceived = call.receive<List<Post>>()
-            // Adiciona cada post na lista de posts
-            posts.addAll(postsReceived)
-            // Responde com sucesso indicando o número de posts adicionados
-            call.respondText("Foram adicionados ${postsReceived.size} post(s): ${postsReceived.joinToString { it.title }}")
-        }
 
-        delete("/posts/delete/{id}") {
-            val postId = call.parameters["id"]?.toIntOrNull()
 
-            if (postId != null) {
-                val postToRemove = posts.find { it.id == postId }
-
-                if (postToRemove != null) {
-                    posts.remove(postToRemove) // Remove o post da lista
-                    call.respondText("Post com id $postId removido com sucesso.")
-                } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
-                }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+        authenticate("auth-basic") {
+            post("posts/add") {
+                val postsReceived = call.receive<List<Post>>()
+                // Adiciona cada post na lista de posts
+                posts.addAll(postsReceived)
+                // Responde com sucesso indicando o número de posts adicionados
+                call.respondText("Foram adicionados ${postsReceived.size} post(s): ${postsReceived.joinToString { it.title }}")
             }
-        }
-        put("/posts/update/{id}") {
-            val postId = call.parameters["id"]?.toIntOrNull()
-            if (postId != null) {
-                val postToUpdate = posts.find { it.id == postId }
 
-                if (postToUpdate != null) {
-                    val updatedPost = call.receive<Post>()
+            delete("/posts/delete/{id}") {
+                val postId = call.parameters["id"]?.toIntOrNull()
 
-                    // Atualiza os campos do post existente
-                    postToUpdate.title = updatedPost.title
-                    postToUpdate.content = updatedPost.content
+                if (postId != null) {
+                    val postToRemove = posts.find { it.id == postId }
 
-                    call.respondText("Post com id $postId atualizado com sucesso: ${postToUpdate.title}")
+                    if (postToRemove != null) {
+                        posts.remove(postToRemove) // Remove o post da lista
+                        call.respondText("Post com id $postId removido com sucesso.")
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
                 } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
             }
-        }
+            put("/posts/update/{id}") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val postToUpdate = posts.find { it.id == postId }
 
-        // Comentários
-        get("/posts/{id}/comments") {
-            val postId = call.parameters["id"]?.toIntOrNull()
-            if (postId != null) {
-                val post = posts.find { it.id == postId }
-                if (post != null) {
-                    call.respond(post.comments)
+                    if (postToUpdate != null) {
+                        val updatedPost = call.receive<Post>()
+
+                        // Atualiza os campos do post existente
+                        postToUpdate.title = updatedPost.title
+                        postToUpdate.content = updatedPost.content
+
+                        call.respondText("Post com id $postId atualizado com sucesso: ${postToUpdate.title}")
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
                 } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
             }
-        }
 
-        post("/posts/{id}/addComment") {
-            val postId = call.parameters["id"]?.toIntOrNull()
-            if (postId != null) {
-                val post = posts.find { it.id == postId }
-                if (post != null) {
-                    val comment = call.receive<Comment>()
-                    post.comments.add(comment)
-                    call.respondText("Comentário adicionado ao post $postId!")
+            // Comentários
+            get("/posts/{id}/comments") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val post = posts.find { it.id == postId }
+                    if (post != null) {
+                        call.respond(post.comments)
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
                 } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
             }
-        }
 
-        // Likes
-        get("/posts/{id}/likes") {
-            val postId = call.parameters["id"]?.toIntOrNull()
-            if (postId != null) {
-                val post = posts.find { it.id == postId }
-                if (post != null) {
-                    call.respond("Likes: " + post.likes)
+            post("/posts/{id}/addComment") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val post = posts.find { it.id == postId }
+                    if (post != null) {
+                        val comment = call.receive<Comment>()
+                        post.comments.add(comment)
+                        call.respondText("Comentário adicionado ao post $postId!")
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
                 } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
             }
-        }
 
-        post("/posts/{id}/like") {
-            val postId = call.parameters["id"]?.toIntOrNull()
-            if (postId != null) {
-                val post = posts.find { it.id == postId }
-                if (post != null) {
-                    post.likes +=1
-                    call.respondText("Post $postId curtido! Total de curtidas: ${post.likes}")
+            // Likes
+            get("/posts/{id}/likes") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val post = posts.find { it.id == postId }
+                    if (post != null) {
+                        call.respond("Likes: " + post.likes)
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
                 } else {
-                    call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
-            } else {
-                call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+            }
+
+            post("/posts/{id}/like") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val post = posts.find { it.id == postId }
+                    if (post != null) {
+                        post.likes +=1
+                        call.respondText("Post $postId curtido! Total de curtidas: ${post.likes}")
+                    } else {
+                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    }
+                } else {
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                }
             }
         }
     }
