@@ -1,18 +1,30 @@
 package com.app
 
-import io.ktor.serialization.kotlinx.json.*
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import java.io.File
 import io.ktor.server.application.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.netty.*
 
 fun main(args: Array<String>) {
-    io.ktor.server.netty.EngineMain.main(args)
+    EngineMain.main(args)
 }
 
 fun Application.module() {
-    install(ContentNegotiation) {
-        json()
-    }
+    // Inicializar o Firebase
+    initFirebase()
+
+    // Outras configurações
     configureRouting()
 }
 
+fun initFirebase() {
+    val serviceAccount = File("src/main/resources/firebase-service-account.json")
+    val options = FirebaseOptions.builder()
+        .setCredentials(GoogleCredentials.fromStream(serviceAccount.inputStream()))
+        .setDatabaseUrl("https://blogapi-2bbdc.firebaseio.com")
+        .build()
 
+    FirebaseApp.initializeApp(options)
+}
