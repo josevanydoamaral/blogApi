@@ -28,5 +28,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth:3.0.2")
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+//Firebase(Tiago)
+    implementation("com.google.firebase:firebase-admin:9.2.0")
+
 
 }
