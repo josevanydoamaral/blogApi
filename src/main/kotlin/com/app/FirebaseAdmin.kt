@@ -7,11 +7,10 @@ import java.io.FileInputStream
 
 object FirebaseAdmin {
     fun initialize() {
-        val serviceAccount = FileInputStream("google-services.json")
+        val serviceAccount = FileInputStream("firebase-service-account.json")
 
         val options = FirebaseOptions.builder()
             .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-            .setDatabaseUrl("https://<your-database-name>.firebaseio.com") // Altere pelo URL do Firebase
             .build()
 
         FirebaseApp.initializeApp(options)
