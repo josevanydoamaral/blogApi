@@ -8,32 +8,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.date.*
-import java.time.Instant
-import kotlinx.serialization.Serializable
 
-@Serializable
-data class Post(var id: Int, var title: String, var content: String, var author: String = "",
-                var comments: MutableList<Comment> = mutableListOf(),
-                var likes: Int = 0, var createdAt: Long = Instant.now().epochSecond
-) {
-    constructor() : this(0, "", "", "", emptyList<Comment>().toMutableList(),0, 0)
-}
 
-@Serializable
-data class Comment(
-    val id: Int,
-    val content: String,
-    val author: String
-)
-
-val posts = mutableListOf<Post>()
-
-val users = mapOf(
-    "jetrains" to "foobar",  // Exemplo de usuário e senha
-    "user1" to "password1",
-    "user2" to "password2"
-)
 
 fun Application.configureRouting() {
     authentication {
@@ -74,36 +50,30 @@ fun Application.configureRouting() {
             }
 
             delete("/posts/delete/{id}") {
-                val postId = call.parameters["id"]?.toIntOrNull()
+                val postId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do post é obrigatório.")
+                val isDeleted = deletePost(postId)
 
-                if (postId != null) {
-                    val postToRemove = posts.find { it.id == postId }
-
-                    if (postToRemove != null) {
-                        posts.remove(postToRemove) // Remove o post da lista
-                        call.respondText("Post com id $postId removido com sucesso.")
-                    } else {
-                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
-                    }
+                if (isDeleted) {
+                    call.respond(HttpStatusCode.OK, "Post eliminado com sucesso.")
                 } else {
-                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                    call.respond(HttpStatusCode.InternalServerError, "Erro ao eliminar o post.")
                 }
             }
+
             put("/posts/update/{id}") {
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
-                    val postToUpdate = posts.find { it.id == postId }
-
-                    if (postToUpdate != null) {
-                        val updatedPost = call.receive<Post>()
-
-                        // Atualiza os campos do post existente
-                        postToUpdate.title = updatedPost.title
-                        postToUpdate.content = updatedPost.content
-
-                        call.respondText("Post com id $postId atualizado com sucesso: ${postToUpdate.title}")
-                    } else {
-                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                    try {
+                        val updatedPost = call.receive<Post>() // Recebe o post atualizado no corpo da requisição
+                        updatedPost.id = postId // Garante que o ID no objeto é o mesmo da rota
+                        val success = updatePost(updatedPost) // Chama a função para atualizar o post
+                        if (success) {
+                            call.respondText("Post com id $postId atualizado com sucesso.")
+                        } else {
+                            call.respondText("Post não encontrado ou erro ao atualizar o post.", status = HttpStatusCode.InternalServerError)
+                        }
+                    } catch (e: Exception) {
+                        call.respondText("Erro ao processar a atualização: ${e.message}", status = HttpStatusCode.BadRequest)
                     }
                 } else {
                     call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
@@ -111,46 +81,41 @@ fun Application.configureRouting() {
             }
 
             // Comentários
-//            get("/posts/{id}/comments") {
-//                val postId = call.parameters["id"]?.toIntOrNull()
-//                if (postId != null) {
-//                    val post = posts.find { it.id == postId }
-//                    if (post != null) {
-//                        call.respond(post.comments)
-//                    } else {
-//                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
-//                    }
-//                } else {
-//                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
-//                }
-//            }
-//
-//            post("/posts/{id}/addComment") {
-//                val postId = call.parameters["id"]?.toIntOrNull()
-//                if (postId != null) {
-//                    val post = posts.find { it.id == postId }
-//                    if (post != null) {
-//                        val comment = call.receive<Comment>()
-//                        post.comments.add(comment)
-//                        call.respondText("Comentário adicionado ao post $postId!")
-//                    } else {
-//                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
-//                    }
-//                } else {
-//                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
-//                }
-//            }
+            get("/posts/{id}/comments") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val comments = getComments(postId) // Chama a função que retorna os comentários
+                    call.respond(comments)
+                } else {
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                }
+            }
+
+            post("/posts/{id}/addComment") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    try {
+                        val comment = call.receive<Comment>() // Recebe o comentário no corpo da requisição
+                        val success = addComment(postId, comment) // Chama a função para adicionar o comentário
+                        if (success) {
+                            call.respondText("Comentário adicionado ao post $postId.")
+                        } else {
+                            call.respondText("Post não encontrado ou erro ao adicionar comentário.", status = HttpStatusCode.InternalServerError)
+                        }
+                    } catch (e: Exception) {
+                        call.respondText("Erro ao processar o comentário: ${e.message}", status = HttpStatusCode.BadRequest)
+                    }
+                } else {
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                }
+            }
 
             // Likes
             get("/posts/{id}/likes") {
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
-                    val post = posts.find { it.id == postId }
-                    if (post != null) {
-                        call.respond("Likes: " + post.likes)
-                    } else {
-                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
-                    }
+                    val likes = getLikes(postId) // Chama a função que retorna o número de likes
+                    call.respond(mapOf("postId" to postId, "likes" to likes))
                 } else {
                     call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
@@ -159,17 +124,31 @@ fun Application.configureRouting() {
             post("/posts/{id}/like") {
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
-                    val post = posts.find { it.id == postId }
-                    if (post != null) {
-                        post.likes +=1
-                        call.respondText("Post $postId curtido! Total de curtidas: ${post.likes}")
+                    val success = addLike(postId) // Chama a função para incrementar os likes
+                    if (success) {
+                        call.respondText("Like adicionado ao post $postId.")
                     } else {
-                        call.respondText("Post com id $postId não encontrado.", status = HttpStatusCode.NotFound)
+                        call.respondText("Post não encontrado ou erro ao adicionar like.", status = HttpStatusCode.InternalServerError)
                     }
                 } else {
                     call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
             }
+
+            post("/posts/{id}/dislike") {
+                val postId = call.parameters["id"]?.toIntOrNull()
+                if (postId != null) {
+                    val success = removeLike(postId) // Chama a função para decrementar os likes
+                    if (success) {
+                        call.respondText("Like removido do post $postId.")
+                    } else {
+                        call.respondText("Post não encontrado ou erro ao remover like.", status = HttpStatusCode.InternalServerError)
+                    }
+                } else {
+                    call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                }
+            }
+
         }
     }
 }
