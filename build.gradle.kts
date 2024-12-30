@@ -1,4 +1,3 @@
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
@@ -16,6 +15,7 @@ application {
 }
 
 repositories {
+    google()  // Necessário para dependências do Firebase
     mavenCentral()
 }
 
@@ -28,8 +28,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth:3.0.2")
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
-//Firebase(Tiago)
-    implementation("com.google.firebase:firebase-admin:9.2.0")
 
+    // Firebase
+    implementation("com.google.firebase:firebase-admin:9.2.0")
 
 }

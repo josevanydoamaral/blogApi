@@ -7,7 +7,12 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.routing.*
+import io.ktor.server.response.respond
+import io.ktor.server.request.receive
+import kotlinx.serialization.json.Json
 import java.io.File
+
 
 fun main(args: Array<String>) {
     EngineMain.main(args) // Inicializa o Ktor
@@ -15,27 +20,12 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     install(ContentNegotiation) {
-        json()
+        json(Json { prettyPrint = true; isLenient = true }) // Serializa para JSON
     }
-    // Inicializar o Firebase
-    initFirebase()
 
-    // Configurações adicionais do Ktor
+    // Inicializa o Firebase
+    FirebaseAdmin.initialize()
+
+    // Configuração das rotas
     configureRouting()
-}
-
-fun initFirebase() {
-    // Caminho para o ficheiro JSON da conta de serviço
-    val serviceAccount = File("src/main/resources/firebase-service-account.json")
-
-    if (!serviceAccount.exists()) {
-        throw IllegalStateException("O ficheiro 'firebase-service-account.json' não foi encontrado em src/main/resources.")
-    }
-
-    val options = FirebaseOptions.builder()
-        .setCredentials(GoogleCredentials.fromStream(serviceAccount.inputStream()))
-        .build() // O URL do database não é necessário para o Firestore
-
-    FirebaseApp.initializeApp(options)
-    println("Firebase inicializado com sucesso!")
 }
