@@ -30,6 +30,7 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
 //Firebase(Tiago)
     implementation("com.google.firebase:firebase-admin:9.2.0")
+    implementation("com.google.cloud:google-cloud-firestore:3.30.0") // Firestore Client
 
 
 }
