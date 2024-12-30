@@ -1,4 +1,4 @@
-
+val ktorVersion = "3.0.2"
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
@@ -25,7 +25,8 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.netty)
     implementation(libs.logback.classic)
-    implementation("io.ktor:ktor-server-auth:3.0.2")
+    implementation("io.ktor:ktor-server-auth:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 

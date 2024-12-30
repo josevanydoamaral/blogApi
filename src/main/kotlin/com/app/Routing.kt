@@ -25,19 +25,23 @@ data class Comment(
 
 val posts = mutableListOf<Post>()
 
+data class UserPrincipal(val name: String, val role: Role) : Principal
+
 val users = mapOf(
-    "jetrains" to "foobar",  // Exemplo de usuário e senha
-    "user1" to "password1",
-    "user2" to "password2"
+    "admin" to Pair("password123", Role.ADMIN),
+    "editor" to Pair("editorpass", Role.EDITOR),
+    "user" to Pair("userpass", Role.USER)
 )
+
 
 fun Application.configureRouting() {
     authentication {
         basic("auth-basic") {
-            realm = "Access to the '/' path"
+            realm = "Access to Blog API"
             validate { credentials ->
-                if (users[credentials.name] == credentials.password) {
-                    UserIdPrincipal(credentials.name)
+                val userRole = users[credentials.name]
+                if (userRole != null && userRole.first == credentials.password) {
+                    UserPrincipal(credentials.name, userRole.second)
                 } else {
                     null
                 }
@@ -58,6 +62,7 @@ fun Application.configureRouting() {
 
         authenticate("auth-basic") {
             post("posts/add") {
+                call.requireRole(Role.EDITOR) // Apenas editores e administradores
                 val postsReceived = call.receive<List<Post>>()
                 // Adiciona cada post na lista de posts
                 posts.addAll(postsReceived)
@@ -66,6 +71,7 @@ fun Application.configureRouting() {
             }
 
             delete("/posts/delete/{id}") {
+                call.requireRole(Role.ADMIN) // Apenas administradores
                 val postId = call.parameters["id"]?.toIntOrNull()
 
                 if (postId != null) {
@@ -82,6 +88,7 @@ fun Application.configureRouting() {
                 }
             }
             put("/posts/update/{id}") {
+                call.requireRole(Role.EDITOR) // Apenas editores e administradores
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val postToUpdate = posts.find { it.id == postId }
@@ -104,6 +111,7 @@ fun Application.configureRouting() {
 
             // Comentários
             get("/posts/{id}/comments") {
+                call.requireRole(Role.USER) // Users
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val post = posts.find { it.id == postId }
@@ -118,6 +126,7 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/addComment") {
+                call.requireRole(Role.USER) // Users
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val post = posts.find { it.id == postId }
@@ -135,6 +144,7 @@ fun Application.configureRouting() {
 
             // Likes
             get("/posts/{id}/likes") {
+                call.requireRole(Role.USER) // Users
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val post = posts.find { it.id == postId }
@@ -149,6 +159,7 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/like") {
+                call.requireRole(Role.USER) // Users
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val post = posts.find { it.id == postId }
