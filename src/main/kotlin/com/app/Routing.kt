@@ -8,16 +8,19 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-
+import org.mindrot.jbcrypt.BCrypt
 
 
 fun Application.configureRouting() {
     authentication {
         basic("auth-basic") {
-            realm = "Access to the '/' path"
+            realm = "Access to Blog API"
             validate { credentials ->
-                if (users[credentials.name] == credentials.password) {
-                    UserIdPrincipal(credentials.name)
+                val user = getUserFromFirestore(credentials.name)
+
+                // Verifica se o usuário existe, está ativo e valida a senha
+                if (user != null && user.isActive && BCrypt.checkpw(credentials.password, user.password)) {
+                    UserPrincipal(user.username, user.role.toString())
                 } else {
                     null
                 }
@@ -37,6 +40,7 @@ fun Application.configureRouting() {
 
         authenticate("auth-basic") {
             post("posts/add") {
+                call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
                 val postReceived = call.receive<Post>()
                 // Adiciona cada post na lista de posts
                 savePost(postReceived)
@@ -50,6 +54,7 @@ fun Application.configureRouting() {
             }
 
             delete("/posts/delete/{id}") {
+                call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
                 val postId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do post é obrigatório.")
                 val isDeleted = deletePost(postId)
 
@@ -61,6 +66,7 @@ fun Application.configureRouting() {
             }
 
             put("/posts/update/{id}") {
+                call.requireRole(Role.EDITOR) // Apenas um Editor pode atualizar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     try {
@@ -82,6 +88,7 @@ fun Application.configureRouting() {
 
             // Comentários
             get("/posts/{id}/comments") {
+                call.requireRole(Role.USER) // Apenas um USER pode ver comentários do post
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val comments = getComments(postId) // Chama a função que retorna os comentários
@@ -92,6 +99,7 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/addComment") {
+                call.requireRole(Role.USER) // Apenas um USER pode comentar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     try {
@@ -112,6 +120,7 @@ fun Application.configureRouting() {
 
             // Likes
             get("/posts/{id}/likes") {
+                call.requireRole(Role.USER) // Apenas um USER pode ver likes do post
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val likes = getLikes(postId) // Chama a função que retorna o número de likes
@@ -122,6 +131,7 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/like") {
+                call.requireRole(Role.USER) // Apenas um USER pode dar likes no post
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val success = addLike(postId) // Chama a função para incrementar os likes
@@ -136,6 +146,7 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/dislike") {
+                call.requireRole(Role.USER) // Apenas um USER pode dar deslikes no post
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     val success = removeLike(postId) // Chama a função para decrementar os likes
@@ -149,6 +160,46 @@ fun Application.configureRouting() {
                 }
             }
 
+            // USERSSSS
+
+            post("/users/add") {
+                val user = call.receive<User>() // Recebe os dados do novo usuário
+                val success = addUser(user)
+                if (success) {
+                    call.respondText("Usuário criado com sucesso.")
+                } else {
+                    call.respondText("Erro ao criar o usuário.", status = HttpStatusCode.InternalServerError)
+                }
+            }
+
+            put("/users/{id}") {
+                val userId = call.parameters["id"] ?: return@put call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
+                try {
+                    val updatedUser = call.receive<User>()
+                    updatedUser.id = userId // Garante que o ID corresponde ao fornecido
+                    val success = updateUser(updatedUser)
+                    if (success) {
+                        call.respondText("Usuário atualizado com sucesso.")
+                    } else {
+                        call.respondText("Erro ao atualizar o usuário.", status = HttpStatusCode.InternalServerError)
+                    }
+                } catch (e: Exception) {
+                    call.respondText("Erro ao processar a atualização: ${e.message}", status = HttpStatusCode.BadRequest)
+                }
+            }
+
+
+
         }
+
+        get("/users") {
+            try {
+                val users = getAllUsersFromFirestore() // Chama a função para obter todos os usuários
+                call.respond(HttpStatusCode.OK, users)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Erro ao buscar usuários: ${e.message}")
+            }
+        }
+
     }
 }

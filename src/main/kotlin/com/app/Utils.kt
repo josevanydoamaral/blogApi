@@ -2,6 +2,7 @@ package com.app
 
 import com.google.cloud.firestore.Firestore
 import com.google.firebase.cloud.FirestoreClient
+import io.ktor.server.auth.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -26,11 +27,19 @@ data class Comment(
 
 val posts = mutableListOf<Post>()
 
-val users = mapOf(
-    "jetrains" to "foobar",  // Exemplo de usuário e senha
-    "user1" to "password1",
-    "user2" to "password2"
+data class User(
+    var id: String = "",                // Identificador único do usuário
+    var username: String = "",          // Nome de usuário para login
+    var password: String = "",          // Senha (idealmente armazenada de forma hash em produção)
+    var role: Role = Role.USER,         // Papel do usuário (USER, EDITOR, ADMIN)
+    var isActive: Boolean = true        // Indica se o usuário está ativo ou suspenso
 )
+
+data class UserPrincipal(
+    val id: String,
+    val username: String,
+    val role: Role = Role.USER
+) : Principal
 
 suspend fun getAllPosts(): List<Post> {
     return withContext(Dispatchers.IO) {
@@ -264,6 +273,88 @@ suspend fun removeLike(postId: Int): Boolean {
         } catch (e: Exception) {
             println("Erro ao remover like: ${e.message}")
             false
+        }
+    }
+}
+
+// USERS
+
+suspend fun addUser(user: User): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val firestore = FirestoreClient.getFirestore()
+            val usersCollection = firestore.collection("users")
+            val usersCount = usersCollection.get().get().documents.size
+
+            if (usersCount == 0) {
+                val adminUser = User(
+                    id = "1",
+                    username = "ADMIN",
+                    password = "ADMIN", // Hash a senha em produção
+                    role = Role.ADMIN,
+                    isActive = true
+                )
+                usersCollection.document(adminUser.id).set(adminUser).get()
+                println("Usuário ADMIN criado automaticamente.")
+            }
+
+            usersCollection.document(user.id).set(user).get()
+            println("Usuário ${user.username} adicionado com sucesso.")
+            true
+        } catch (e: Exception) {
+            println("Erro ao adicionar usuário: ${e.localizedMessage}")
+            e.printStackTrace()
+            false
+        }
+    }
+}
+
+
+suspend fun updateUser(user: User): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val firestore: Firestore = FirestoreClient.getFirestore()
+
+            // Cria um mapa com os dados atualizados
+            val userMap = mapOf(
+                "username" to user.username,
+                "password" to user.password, // Certifique-se de usar hashing
+                "role" to user.role.toString(),
+                "isActive" to user.isActive
+            )
+
+            // Atualiza o documento do usuário no Firestore
+            firestore.collection("users")
+                .document(user.id)
+                .set(userMap)
+                .get()
+
+            println("Usuário ${user.username} atualizado com sucesso.")
+            true
+        } catch (e: Exception) {
+            println("Erro ao atualizar usuário: ${e.message}")
+            false
+        }
+    }
+}
+
+suspend fun getAllUsersFromFirestore(): List<User> {
+    return withContext(Dispatchers.IO) {
+        val firestore = FirestoreClient.getFirestore()
+        val usersCollection = firestore.collection("users").get().get() // Chamada síncrona
+        usersCollection.documents.mapNotNull { it.toObject(User::class.java) }
+    }
+}
+
+
+suspend fun getUserFromFirestore(username: String): User? {
+    return withContext(Dispatchers.IO) { // Certifique-se de que a operação de I/O seja executada no contexto correto
+        val firestore = FirestoreClient.getFirestore()
+        val userDoc = firestore.collection("users").document(username).get().get() // Chamada síncrona
+        if (userDoc.exists()) {
+            userDoc.toObject(User::class.java)
+        } else {
+            null
         }
     }
 }
