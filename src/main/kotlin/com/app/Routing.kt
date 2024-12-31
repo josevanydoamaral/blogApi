@@ -20,6 +20,20 @@ fun Application.configureRouting() {
             realm = "Access to Blog API"
             validate { credentials ->
                 val user = getUserFromFirestore(credentials.name)
+                println()
+                println()
+                println(credentials.name)
+                println()
+                println()
+                println(user)
+                println()
+                println()
+                if (user != null) {
+                    println(verifyPasswordBCrypt(credentials.password, user.password))
+                }
+                println()
+                println()
+                println()
 
                 // Verifica se o usuário existe, está ativo e valida a senha
                 if (user != null && user.isActive && verifyPasswordBCrypt(credentials.password, user.password)) {
@@ -39,36 +53,23 @@ fun Application.configureRouting() {
         get("posts") {
             call.respond(getAllPosts())
         }
-        delete("/posts/delete/{id}") {
-            //call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
-            val postId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do post é obrigatório.")
-            val isDeleted = deletePost(postId)
-
-            if (isDeleted) {
-                call.respond(HttpStatusCode.OK, "Post eliminado com sucesso.")
-            } else {
-                call.respond(HttpStatusCode.InternalServerError, "Erro ao eliminar o post.")
-            }
-        }
-
-        post("posts/add") {
-            //call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
-            val postReceived = call.receive<Post>()
-            println(postReceived)
-
-            // Adiciona cada post na lista de posts
-            savePost(postReceived)
-            val isSaved = savePost(postReceived)
-
-            if (isSaved) {
-                call.respond(HttpStatusCode.Created, "Post: ${postReceived.title} foi adicionado")
-            } else {
-                call.respond(HttpStatusCode.InternalServerError, "Erro ao salvar o post.")
-            }
-        }
-
 
         authenticate("auth-basic") {
+            post("posts/add") {
+                //call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
+                val postReceived = call.receive<Post>()
+                println(postReceived)
+
+                // Adiciona cada post na lista de posts
+                savePost(postReceived)
+                val isSaved = savePost(postReceived)
+
+                if (isSaved) {
+                    call.respond(HttpStatusCode.Created, "Post: ${postReceived.title} foi adicionado")
+                } else {
+                    call.respond(HttpStatusCode.InternalServerError, "Erro ao salvar o post.")
+                }
+            }
 
             delete("posts/delete/{id}") {
                 call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
