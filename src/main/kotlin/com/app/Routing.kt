@@ -19,21 +19,11 @@ fun Application.configureRouting() {
         basic("auth-basic") {
             realm = "Access to Blog API"
             validate { credentials ->
+                val user = getUserFromFirestore(credentials.name)
 
-                val userRole = users[credentials.name]
-                if (userRole != null && userRole.first == credentials.password) {
-                    UserPrincipal(credentials.name, userRole.second)
-
-                val user = getUserFromFirestore(credentials.name.toString())
                 // Verifica se o usuário existe, está ativo e valida a senha
                 if (user != null && user.isActive && verifyPasswordBCrypt(credentials.password, user.password)) {
                     UserPrincipal(user.username, user.role.toString())
-
-                val user = getUserFromFirestore(credentials.name.toString())
-                // Verifica se o usuário existe, está ativo e valida a senha
-                if (user != null && user.isActive && verifyPasswordBCrypt(credentials.password.toString(), user.password)) {
-                    UserPrincipal(user.username, user.role.toString())
-
                 } else {
                     null
                 }
@@ -65,13 +55,6 @@ fun Application.configureRouting() {
         authenticate("auth-basic") {
 
             post("posts/add") {
-
-                call.requireRole(Role.EDITOR) // Apenas editores e administradores
-                val postsReceived = call.receive<List<Post>>()
-
-                //call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
-                val postReceived = call.receive<Post>()
-
                 call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
                 val postReceived = call.receive<Post>()
                 println(postReceived)
@@ -86,7 +69,7 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.InternalServerError, "Erro ao salvar o post.")
                 }
             }
-
+            delete("posts/delete/{id}") {
                 call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
                 val postId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do post é obrigatório.")
                 val isDeleted = deletePost(postId)
@@ -97,16 +80,7 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.InternalServerError, "Erro ao eliminar o post.")
                 }
             }
-
-
-            put("/posts/update/{id}") {
-                call.requireRole(Role.EDITOR) // Apenas editores e administradores
-                val postId = call.parameters["id"]?.toIntOrNull()
-                if (postId != null) {
-                    try {
-                        val updatedPost = call.receive<Post>() // Recebe o post atualizado no corpo da requisição
-                        updatedPost.id = postId.toString() // Garante que o ID no objeto é o mesmo da rota
-
+            
             put("/posts/update/{id}") {
                 call.requireRole(Role.EDITOR) // Apenas um Editor pode atualizar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
@@ -141,9 +115,6 @@ fun Application.configureRouting() {
             }
 
             post("/posts/{id}/addComment") {
-                    try {
-                        val comment = call.receive<Comment>() // Recebe o comentário no corpo da requisição
-                        val principal = call.principal<UserPrincipal>()
                 call.requireRole(Role.USER) // Apenas um USER pode comentar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
@@ -259,16 +230,14 @@ fun Application.configureRouting() {
                 }
             }
 
-        }
-
-        get("/users") {
-            try {
-                val users = getAllUsersFromFirestore() // Chama a função para obter todos os usuários
-                call.respond(HttpStatusCode.OK, users)
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, "Erro ao buscar usuários: ${e.message}")
+            get("/users") {
+                try {
+                    val users = getAllUsersFromFirestore() // Chama a função para obter todos os usuários
+                    call.respond(HttpStatusCode.OK, users)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, "Erro ao buscar usuários: ${e.message}")
+                }
             }
-        }
 
             // USERSSSS
 
@@ -287,9 +256,6 @@ fun Application.configureRouting() {
                     call.respondText("Erro ao processar a atualização: ${e.message}", status = HttpStatusCode.BadRequest)
                 }
             }
-
-
-
         }
         delete("/users/delete/{id}") {
             //call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
