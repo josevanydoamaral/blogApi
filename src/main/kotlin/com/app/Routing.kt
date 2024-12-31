@@ -11,7 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mindrot.jbcrypt.BCrypt
-
+import java.io.File
 
 
 fun Application.configureRouting() {
@@ -31,7 +31,15 @@ fun Application.configureRouting() {
     }
     routing {
         get("/") {
-            // AQUI QUERO COLOCAR O README
+            try {
+                // Caminho relativo para o arquivo README.md
+                val readmePath = "README.md"
+                val readmeContent = File(readmePath).readText() // Lê o conteúdo do arquivo
+                call.respondText(readmeContent, ContentType.Text.Plain) // Retorna o conteúdo como texto
+            } catch (e: Exception) {
+                // Tratamento de erros caso o arquivo não seja encontrado ou outra falha ocorra
+                call.respond(HttpStatusCode.InternalServerError, "Erro ao carregar o README: ${e.message}")
+            }
         }
 
 
@@ -69,7 +77,6 @@ fun Application.configureRouting() {
             }
 
             put("/posts/update/{id}") {
-                call.requireRole(Role.EDITOR) // Apenas um Editor pode atualizar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     try {
@@ -133,6 +140,7 @@ fun Application.configureRouting() {
                 }
             }
             post("/users/add") {
+                call.requireRole(Role.USER) //
                 val user = call.receive<User>() // Recebe os dados do novo usuário
                 val success = addUser(user)
                 if (success) {
