@@ -32,20 +32,9 @@ fun Application.module() {
         json()
     }
 
-//    install(StatusPages) {
-//        exception<AuthorizationException> {call, cause ->
-//            call.respond(HttpStatusCode.Forbidden, cause.message ?: "Acesso negado")
-//        }
-//    }
-
-
-
     // Inicializar o Firebase
     initFirebase()
-    // Configurações adicionais do Ktor
 
-    // Inicializar o Firebase
-    initFirebase()
     // Configurações adicionais do Ktor
     configureRouting()
 
