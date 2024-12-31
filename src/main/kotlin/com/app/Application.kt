@@ -27,16 +27,6 @@ fun main(args: Array<String>) {
     EngineMain.main(args) // Inicializa o Ktor
 }
 
-import kotlinx.coroutines.runBlocking
-import java.io.File
-
-fun main(args: Array<String>) {
-    EngineMain.main(args) // Inicializa o Ktor
-}
-
-
-
-
 fun Application.module() {
     install(ContentNegotiation) {
         json()
