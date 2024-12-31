@@ -17,38 +17,6 @@ import java.io.File
 
 fun main(args: Array<String>) {
     EngineMain.main(args) // Inicializa o Ktor
-
-    runBlocking {
-        ensureAdminUserExists()
-    }
-
-    embeddedServer(Netty, port = 8080) {
-        // Configuração do servidor
-    }.start(wait = true)
-}
-
-// Função que chama addUser para garantir que o usuário ADMIN seja criado
-suspend fun ensureAdminUserExists() {
-    withContext(Dispatchers.IO) {
-        val firestore = FirestoreClient.getFirestore()
-        val usersCollection = firestore.collection("users")
-
-        val usersCount = usersCollection.get().get().documents.size
-
-        if (usersCount == 0) {
-            val adminUser = User(
-                id = "1",
-                username = "ADMIN",
-                password = "ADMIN", // Use hashing em produção
-                role = Role.ADMIN,
-                isActive = true
-            )
-            usersCollection.document(adminUser.id).set(adminUser).get()
-            println("Usuário ADMIN criado automaticamente.")
-        } else {
-            println("Usuário ADMIN já existe.")
-        }
-    }
 }
 
 fun Application.module() {
@@ -57,9 +25,12 @@ fun Application.module() {
     }
     // Inicializar o Firebase
     initFirebase()
-
     // Configurações adicionais do Ktor
     configureRouting()
+
+    runBlocking {
+        ensureAdminUserExists() // Garante a criação do usuário ADMIN
+    }
 }
 
 fun initFirebase() {

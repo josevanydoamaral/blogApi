@@ -2,7 +2,9 @@ package com.app
 
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class Role {
     ADMIN, EDITOR, USER
 }

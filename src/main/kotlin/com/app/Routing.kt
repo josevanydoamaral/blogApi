@@ -16,10 +16,9 @@ fun Application.configureRouting() {
         basic("auth-basic") {
             realm = "Access to Blog API"
             validate { credentials ->
-                val user = getUserFromFirestore(credentials.name)
-
+                val user = getUserFromFirestore(credentials.name.toString())
                 // Verifica se o usuário existe, está ativo e valida a senha
-                if (user != null && user.isActive && BCrypt.checkpw(credentials.password, user.password)) {
+                if (user != null && user.isActive && verifyPasswordBCrypt(credentials.password.toString(), user.password)) {
                     UserPrincipal(user.username, user.role.toString())
                 } else {
                     null
@@ -42,6 +41,7 @@ fun Application.configureRouting() {
             post("posts/add") {
                 call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
                 val postReceived = call.receive<Post>()
+                println(postReceived)
                 // Adiciona cada post na lista de posts
                 savePost(postReceived)
                 val isSaved = savePost(postReceived)
@@ -129,6 +129,15 @@ fun Application.configureRouting() {
                     call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 }
             }
+            post("/users/add") {
+                val user = call.receive<User>() // Recebe os dados do novo usuário
+                val success = addUser(user)
+                if (success) {
+                    call.respondText("Usuário criado com sucesso.")
+                } else {
+                    call.respondText("Erro ao criar o usuário.", status = HttpStatusCode.InternalServerError)
+                }
+            }
 
             post("/posts/{id}/like") {
                 call.requireRole(Role.USER) // Apenas um USER pode dar likes no post
@@ -162,16 +171,6 @@ fun Application.configureRouting() {
 
             // USERSSSS
 
-            post("/users/add") {
-                val user = call.receive<User>() // Recebe os dados do novo usuário
-                val success = addUser(user)
-                if (success) {
-                    call.respondText("Usuário criado com sucesso.")
-                } else {
-                    call.respondText("Erro ao criar o usuário.", status = HttpStatusCode.InternalServerError)
-                }
-            }
-
             put("/users/{id}") {
                 val userId = call.parameters["id"] ?: return@put call.respondText("Id inválido.", status = HttpStatusCode.BadRequest)
                 try {
@@ -190,6 +189,17 @@ fun Application.configureRouting() {
 
 
 
+        }
+        delete("/users/delete/{id}") {
+            //call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
+            val userId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do user é obrigatório.")
+            val isDeleted = deleteUser(userId)
+
+            if (isDeleted) {
+                call.respond(HttpStatusCode.OK, "User eliminado com sucesso.")
+            } else {
+                call.respond(HttpStatusCode.InternalServerError, "Erro ao eliminar o User.")
+            }
         }
 
         get("/users") {

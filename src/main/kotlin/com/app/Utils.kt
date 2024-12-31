@@ -6,6 +6,8 @@ import io.ktor.server.auth.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import org.mindrot.jbcrypt.BCrypt
+import java.security.MessageDigest
 import java.time.Instant
 
 @Serializable
@@ -27,13 +29,14 @@ data class Comment(
 
 val posts = mutableListOf<Post>()
 
+@Serializable
 data class User(
     var id: String = "",                // Identificador único do usuário
     var username: String = "",          // Nome de usuário para login
     var password: String = "",          // Senha (idealmente armazenada de forma hash em produção)
     var role: Role = Role.USER,         // Papel do usuário (USER, EDITOR, ADMIN)
     var isActive: Boolean = true        // Indica se o usuário está ativo ou suspenso
-)
+) 
 
 data class UserPrincipal(
     val id: String,
@@ -74,7 +77,9 @@ suspend fun savePost(post: Post): Boolean {
                 "title" to post.title,
                 "content" to post.content,
                 "author" to post.author,
-                "likes" to post.likes
+                "comments" to post.comments,
+                "likes" to post.likes,
+                "createdAt" to post.createdAt
             )
 
             // Salve o post na coleção "posts"
@@ -284,22 +289,19 @@ suspend fun addUser(user: User): Boolean {
         try {
             val firestore = FirestoreClient.getFirestore()
             val usersCollection = firestore.collection("users")
-            val usersCount = usersCollection.get().get().documents.size
 
-            if (usersCount == 0) {
-                val adminUser = User(
-                    id = "1",
-                    username = "ADMIN",
-                    password = "ADMIN", // Hash a senha em produção
-                    role = Role.ADMIN,
-                    isActive = true
-                )
-                usersCollection.document(adminUser.id).set(adminUser).get()
-                println("Usuário ADMIN criado automaticamente.")
-            }
+            // Gera o ID automaticamente usando a função existente
+            val newId = generateAutoIncrementId("users")
 
-            usersCollection.document(user.id).set(user).get()
-            println("Usuário ${user.username} adicionado com sucesso.")
+            // Hash da senha do usuário
+            val hashedUser = user.copy(
+                id = newId, // Define o ID gerado automaticamente
+                password = hashPassword(user.password) // Hasheia a senha
+            )
+
+            // Salva o usuário no Firestore
+            usersCollection.document(hashedUser.id).set(hashedUser).get()
+            println("Usuário ${hashedUser.username} com ID ${hashedUser.id} adicionado com sucesso.")
             true
         } catch (e: Exception) {
             println("Erro ao adicionar usuário: ${e.localizedMessage}")
@@ -348,13 +350,103 @@ suspend fun getAllUsersFromFirestore(): List<User> {
 
 
 suspend fun getUserFromFirestore(username: String): User? {
-    return withContext(Dispatchers.IO) { // Certifique-se de que a operação de I/O seja executada no contexto correto
-        val firestore = FirestoreClient.getFirestore()
-        val userDoc = firestore.collection("users").document(username).get().get() // Chamada síncrona
-        if (userDoc.exists()) {
-            userDoc.toObject(User::class.java)
-        } else {
+    return withContext(Dispatchers.IO) {
+        try {
+            val firestore = FirestoreClient.getFirestore()
+            println("Iniciando busca para o username: $username")
+
+            // Busca o documento usando uma query para o campo "username"
+            val querySnapshot = firestore.collection("users")
+                .whereEqualTo("username", username)
+                .get()
+                .get() // Chamada síncrona para simplificar
+
+            // Verifica se algum documento foi encontrado
+            if (!querySnapshot.isEmpty) {
+                val userDoc = querySnapshot.documents.first()
+                println("Usuário encontrado: ${userDoc.data}")
+                userDoc.toObject(User::class.java)
+            } else {
+                println("Nenhum usuário encontrado com username: $username")
+                null
+            }
+        } catch (e: Exception) {
+            println("Erro ao buscar usuário no Firestore: ${e.localizedMessage}")
             null
         }
     }
+}
+
+
+suspend fun deleteUser(userId: String): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val firestore: Firestore = FirestoreClient.getFirestore()
+
+            // Referência ao documento do usuário pelo ID
+            val userDocument = firestore.collection("users").document(userId)
+
+            // Verifica se o usuário existe antes de deletar
+            val snapshot = userDocument.get().get()
+            if (snapshot.exists()) {
+                userDocument.delete().get()
+                println("Usuário com ID $userId foi apagado com sucesso.")
+                true
+            } else {
+                println("Usuário com ID $userId não encontrado.")
+                false
+            }
+        } catch (e: Exception) {
+            println("Erro ao apagar usuário: ${e.message}")
+            false
+        }
+    }
+}
+
+// Função que chama addUser para garantir que o usuário ADMIN seja criado
+suspend fun ensureAdminUserExists() {
+    val firestore: Firestore = FirestoreClient.getFirestore()
+    val usersCollection = firestore.collection("users")
+
+    try {
+        // Verifica se existe algum usuário na coleção "users"
+        val userCount = usersCollection.get().get().size()
+        if (userCount == 0) {
+            // Cria o usuário ADMIN automaticamente
+            val adminUser = User(
+                id = generateAutoIncrementId("users"),
+                username = "ADMIN",
+                password = hashPasswordBCrypt("ADMIN"), // Hasheia a senha do admin
+                role = Role.ADMIN,
+                isActive = true
+            )
+            usersCollection.document(adminUser.id).set(adminUser).get()
+            println("Usuário ADMIN criado automaticamente.")
+        } else {
+            println("Usuários já existem no sistema. Nenhum ADMIN foi criado.")
+        }
+    } catch (e: Exception) {
+        println("Erro ao garantir o usuário ADMIN: ${e.message}")
+    }
+}
+
+suspend fun generateAutoIncrementId(collectionName: String): String {
+    val firestore: Firestore = FirestoreClient.getFirestore()
+    val documents = firestore.collection(collectionName).get().get().documents
+    return (documents.size + 1).toString() // ID será o tamanho atual + 1
+}
+
+fun hashPassword(password: String): String {
+    return MessageDigest.getInstance("SHA-256")
+        .digest(password.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+}
+
+fun hashPasswordBCrypt(password: String): String {
+    return BCrypt.hashpw(password, BCrypt.gensalt())
+}
+
+// Comparar a senha fornecida com o hash armazenado
+fun verifyPasswordBCrypt(password: String, hashed: String): Boolean {
+    return BCrypt.checkpw(password, hashed)
 }
