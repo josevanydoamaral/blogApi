@@ -11,11 +11,11 @@ import java.security.MessageDigest
 import java.time.Instant
 
 @Serializable
-data class Post(var id: String, var title: String, var content: String, var author: String = "",
+data class Post(var id: Int, var title: String, var content: String, var author: String = "",
                 var comments: MutableList<Comment> = mutableListOf(),
-                var likes: Int = 0, val createdAt: Long = 0
+                var likes: Int = 0, var createdAt: Long = Instant.now().epochSecond
 ) {
-    constructor() : this("", "", "", "", emptyList<Comment>().toMutableList(),0, 0)
+    constructor() : this(0, "", "", "", emptyList<Comment>().toMutableList(),0, 0)
 }
 
 @Serializable
@@ -36,7 +36,7 @@ data class User(
     var password: String = "",          // Senha (idealmente armazenada de forma hash em produção)
     var role: Role = Role.USER,         // Papel do usuário (USER, EDITOR, ADMIN)
     var isActive: Boolean = true        // Indica se o usuário está ativo ou suspenso
-)
+) 
 
 data class UserPrincipal(
     val id: String,
@@ -54,7 +54,9 @@ suspend fun getAllPosts(): List<Post> {
 
             // Mapeia os documentos para objetos Post
             documents.mapNotNull { doc ->
-                doc.toObject(Post::class.java)?.copy(id = doc.id)
+                // Tenta converter doc.id para Int
+                val postId = doc.id.toIntOrNull() ?: 0 // Define um valor padrão (0) se a conversão falhar
+                doc.toObject(Post::class.java).copy(id = postId)
             }
         } catch (e: Exception) {
             println("Erro ao buscar posts: ${e.message}")
@@ -432,6 +434,13 @@ suspend fun generateAutoIncrementId(collectionName: String): String {
     val documents = firestore.collection(collectionName).get().get().documents
     return (documents.size + 1).toString() // ID será o tamanho atual + 1
 }
+
+fun hashPassword(password: String): String {
+    return MessageDigest.getInstance("SHA-256")
+        .digest(password.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+}
+
 fun hashPasswordBCrypt(password: String): String {
     return BCrypt.hashpw(password, BCrypt.gensalt())
 }
