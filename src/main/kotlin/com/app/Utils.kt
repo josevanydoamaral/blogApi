@@ -11,11 +11,11 @@ import java.security.MessageDigest
 import java.time.Instant
 
 @Serializable
-data class Post(var id: Int, var title: String, var content: String, var author: String = "",
+data class Post(var id: String, var title: String, var content: String, var author: String = "",
                 var comments: MutableList<Comment> = mutableListOf(),
-                var likes: Int = 0, var createdAt: Long = Instant.now().epochSecond
+                var likes: Int = 0, var createdAt: String = ""
 ) {
-    constructor() : this(0, "", "", "", emptyList<Comment>().toMutableList(),0, 0)
+    constructor() : this("", "", "", "", emptyList<Comment>().toMutableList(),0, "")
 }
 
 @Serializable
@@ -54,9 +54,7 @@ suspend fun getAllPosts(): List<Post> {
 
             // Mapeia os documentos para objetos Post
             documents.mapNotNull { doc ->
-                // Tenta converter doc.id para Int
-                val postId = doc.id.toIntOrNull() ?: 0 // Define um valor padrão (0) se a conversão falhar
-                doc.toObject(Post::class.java).copy(id = postId)
+                doc.toObject(Post::class.java)?.copy(id = doc.id)
             }
         } catch (e: Exception) {
             println("Erro ao buscar posts: ${e.message}")
@@ -433,12 +431,6 @@ suspend fun generateAutoIncrementId(collectionName: String): String {
     val firestore: Firestore = FirestoreClient.getFirestore()
     val documents = firestore.collection(collectionName).get().get().documents
     return (documents.size + 1).toString() // ID será o tamanho atual + 1
-}
-
-fun hashPassword(password: String): String {
-    return MessageDigest.getInstance("SHA-256")
-        .digest(password.toByteArray())
-        .joinToString("") { "%02x".format(it) }
 }
 
 fun hashPasswordBCrypt(password: String): String {

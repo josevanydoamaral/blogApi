@@ -51,24 +51,25 @@ fun Application.configureRouting() {
             }
         }
 
+        post("posts/add") {
+            //call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
+            val postReceived = call.receive<Post>()
+            println(postReceived)
+
+            // Adiciona cada post na lista de posts
+            savePost(postReceived)
+            val isSaved = savePost(postReceived)
+
+            if (isSaved) {
+                call.respond(HttpStatusCode.Created, "Post: ${postReceived.title} foi adicionado")
+            } else {
+                call.respond(HttpStatusCode.InternalServerError, "Erro ao salvar o post.")
+            }
+        }
+
 
         authenticate("auth-basic") {
 
-            post("posts/add") {
-                call.requireRole(Role.EDITOR) // Apenas um Editor pode adicionar posts
-                val postReceived = call.receive<Post>()
-                println(postReceived)
-
-                // Adiciona cada post na lista de posts
-                savePost(postReceived)
-                val isSaved = savePost(postReceived)
-
-                if (isSaved) {
-                    call.respond(HttpStatusCode.Created, "Post: ${postReceived.title} foi adicionado")
-                } else {
-                    call.respond(HttpStatusCode.InternalServerError, "Erro ao salvar o post.")
-                }
-            }
             delete("posts/delete/{id}") {
                 call.requireRole(Role.ADMIN) // Apenas um ADMIN pode apagar posts
                 val postId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID do post é obrigatório.")
@@ -80,14 +81,14 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.InternalServerError, "Erro ao eliminar o post.")
                 }
             }
-            
+
             put("/posts/update/{id}") {
                 call.requireRole(Role.EDITOR) // Apenas um Editor pode atualizar posts
                 val postId = call.parameters["id"]?.toIntOrNull()
                 if (postId != null) {
                     try {
                         val updatedPost = call.receive<Post>() // Recebe o post atualizado no corpo da requisição
-                        updatedPost.id = postId // Garante que o ID no objeto é o mesmo da rota
+                        updatedPost.id = postId.toString() // Garante que o ID no objeto é o mesmo da rota
                         val success = updatePost(updatedPost) // Chama a função para atualizar o post
                         if (success) {
                             call.respondText("Post com id $postId atualizado com sucesso.")
