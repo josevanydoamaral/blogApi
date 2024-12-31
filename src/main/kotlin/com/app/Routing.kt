@@ -20,21 +20,6 @@ fun Application.configureRouting() {
             realm = "Access to Blog API"
             validate { credentials ->
                 val user = getUserFromFirestore(credentials.name)
-                println()
-                println()
-                println(credentials.name)
-                println()
-                println()
-                println(user)
-                println()
-                println()
-                if (user != null) {
-                    println(verifyPasswordBCrypt(credentials.password, user.password))
-                }
-                println()
-                println()
-                println()
-
                 // Verifica se o usuário existe, está ativo e valida a senha
                 if (user != null && user.isActive && verifyPasswordBCrypt(credentials.password, user.password)) {
                     UserPrincipal(user.username, user.role.toString())
