@@ -1,0 +1,334 @@
+{
+	"info": {
+		"_postman_id": "0b5c7723-d54f-470b-a227-6566ff95494d",
+		"name": "blogApi",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40661563"
+	},
+	"item": [
+		{
+			"name": "comments",
+			"item": [
+				{
+					"name": "http://127.0.0.1:8080/posts/1/comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/posts/1/comments",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"1",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://127.0.0.1:8080/posts/1/addComment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\": 2,\r\n    \"content\": \"Muito bom, mas acho que poderia ter mais detalhes.\",\r\n    \"author\": \"Maria Oliveira\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/posts/1/addComment",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"1",
+								"addComment"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "likes",
+			"item": [
+				{
+					"name": "http://127.0.0.1:8080/posts/1/likes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/posts/1/likes",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"1",
+								"likes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://127.0.0.1:8080/posts/1/like",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/posts/1/like",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"1",
+								"like"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "users",
+			"item": [
+				{
+					"name": "http://127.0.0.1:8080/users/add",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "ADMIN",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "ADMIN",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\" : \"telmo\",\r\n    \"password\" : \"jose\", // Hash a senha em produção\r\n    \"role\" : \"EDITOR\",\r\n    \"isActive\" : true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/users/add",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://127.0.0.1:8080/users/delete/2",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/users/delete/2",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"delete",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "http://127.0.0.1:8080/posts",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\r\n  {\r\n    \"id\": 1,\r\n    \"title\": \"Como melhorar a produtividade no trabalho\",\r\n    \"content\": \"A produtividade no trabalho pode ser melhorada com algumas técnicas simples, como organização, priorização de tarefas e a utilização de ferramentas de gestão de tempo.\"\r\n  },\r\n  {\r\n    \"id\": 2,\r\n    \"title\": \"Dicas de viagem para quem está com pouco tempo\",\r\n    \"content\": \"Viajar em um curto período de tempo exige planejamento eficiente. Aqui estão algumas dicas para aproveitar ao máximo o seu tempo e explorar novos destinos.\"\r\n  },\r\n  {\r\n    \"id\": 3,\r\n    \"title\": \"Tecnologia e inovação: tendências para 2025\",\r\n    \"content\": \"Com o avanço constante da tecnologia, é importante acompanhar as tendências para o futuro. O ano de 2025 promete inovações em inteligência artificial, automação e sustentabilidade.\"\r\n  },\r\n  {\r\n    \"id\": 4,\r\n    \"title\": \"A importância da alimentação saudável para a mente\",\r\n    \"content\": \"Alimentar-se bem não só melhora o corpo, mas também é crucial para a saúde mental. Alimentos ricos em nutrientes essenciais ajudam a melhorar o foco e o bem-estar emocional.\"\r\n  },\r\n  {\r\n    \"id\": 5,\r\n    \"title\": \"Como começar um negócio do zero\",\r\n    \"content\": \"Começar um negócio do zero pode ser desafiador, mas com as estratégias certas, é possível alcançar o sucesso. Neste artigo, exploramos os primeiros passos para abrir sua própria empresa.\"\r\n  }\r\n]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/posts/add",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"posts",
+						"add"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8080/posts",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/posts",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"posts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8080/posts/delete/1",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/posts/delete/3",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"posts",
+						"delete",
+						"3"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8080/posts/update/4",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "    {\r\n        \"id\": 4,\r\n        \"title\": \"A importância da alimentação saudável para a mente e corpo\",\r\n        \"content\": \"Alimentar-se bem não só melhora o corpo, mas também é crucial para a saúde mental. Alimentos ricos em nutrientes essenciais ajudam a melhorar o foco e o bem-estar emocional.\"\r\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/posts/update/4",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"posts",
+						"update",
+						"4"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8080/users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/users",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
